@@ -7,8 +7,15 @@ const ProtectedRoute = ({ children }: { children: ReactElement }) => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-500">
-        Loading...
+      <div className="app-shell">
+        <div className="app-frame flex min-h-[70vh] items-center justify-center">
+          <div className="surface-card-strong animate-rise px-8 py-6 text-center">
+            <p className="section-eyebrow">Preparing your workspace</p>
+            <p className="mt-3 text-sm text-[color:var(--text-muted)]">
+              Loading your rooms and study state...
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
