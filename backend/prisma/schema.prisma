@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  createdRooms   StudyRoom[]   @relation("RoomCreator")
+  memberships    RoomMember[]
+  messages       Message[]
+  sessionsStarted StudySession[] @relation("SessionStarter")
+}
+
+model StudyRoom {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  createdById String
+  createdAt   DateTime @default(now())
+
+  creator  User         @relation("RoomCreator", fields: [createdById], references: [id])
+  members  RoomMember[]
+  messages Message[]
+  sessions StudySession[]
+}
+
+model RoomMember {
+  id       String   @id @default(cuid())
+  userId   String
+  roomId   String
+  joinedAt DateTime @default(now())
+
+  user User      @relation(fields: [userId], references: [id])
+  room StudyRoom @relation(fields: [roomId], references: [id])
+
+  @@unique([userId, roomId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  roomId    String
+  createdAt DateTime @default(now())
+
+  user User      @relation(fields: [userId], references: [id])
+  room StudyRoom @relation(fields: [roomId], references: [id])
+}
+
+model StudySession {
+  id          String   @id @default(cuid())
+  roomId      String
+  startedById String
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  duration    Int?
+
+  room      StudyRoom @relation(fields: [roomId], references: [id])
+  startedBy User      @relation("SessionStarter", fields: [startedById], references: [id])
+}
