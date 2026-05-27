@@ -27,58 +27,107 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto flex min-h-screen max-w-md items-center px-6">
-        <div className="w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Welcome back
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Sign in to continue to your study rooms.
-          </p>
+    <div className="app-shell">
+      <div className="auth-grid">
+        <aside className="auth-side animate-rise">
+          <div>
+            <p className="section-eyebrow">Collaborative study room</p>
+            <h1 className="display-title mt-5 max-w-lg">
+              Return to a workspace built for calm, accountable focus.
+            </h1>
+            <p className="section-copy mt-5 max-w-xl">
+              Pick up your rooms, reconnect with your study group, and step back
+              into live sessions without losing your rhythm.
+            </p>
+          </div>
 
-          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-            <label className="block text-sm font-medium text-slate-700">
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
-                placeholder="you@example.com"
-                required
-              />
-            </label>
+          <div className="grid gap-4">
+            <div className="metric-card">
+              <p className="section-eyebrow">Focused collaboration</p>
+              <p className="mt-3 text-base font-semibold text-[color:var(--text)]">
+                Live room presence, shared sessions, and lightweight chat keep
+                everyone aligned without turning the room into a distraction.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="metric-card">
+                <p className="section-eyebrow">Session rhythm</p>
+                <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">
+                  Timers stay server-synced so every study block feels reliable.
+                </p>
+              </div>
+              <div className="metric-card">
+                <p className="section-eyebrow">Progress clarity</p>
+                <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">
+                  Dashboards and room history make momentum visible at a glance.
+                </p>
+              </div>
+            </div>
+          </div>
+        </aside>
 
-            <label className="block text-sm font-medium text-slate-700">
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
-                placeholder="••••••••"
-                required
-              />
-            </label>
+        <div className="mx-auto flex w-full justify-center lg:justify-end">
+          <div className="auth-card animate-rise">
+            <div className="panel-heading">
+              <div>
+                <p className="section-eyebrow">Welcome back</p>
+                <h2 className="section-title mt-3">Sign in to your focus space</h2>
+              </div>
+              <span className="status-pill">Ready to study</span>
+            </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            <p className="section-copy mt-4">
+              Continue into your rooms, resume shared sessions, and stay in step
+              with the people you learn best with.
+            </p>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {submitting ? "Signing in..." : "Sign in"}
-            </button>
-          </form>
+            <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+              <label className="app-label">
+                Email
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="app-input"
+                  placeholder="you@example.com"
+                  required
+                />
+              </label>
 
-          <p className="mt-6 text-sm text-slate-500">
-            New here?{" "}
-            <Link className="font-semibold text-slate-900" to="/register">
-              Create an account
-            </Link>
-          </p>
+              <label className="app-label">
+                Password
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="app-input"
+                  placeholder="Enter your password"
+                  required
+                />
+              </label>
+
+              {error && <p className="app-alert-error">{error}</p>}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="app-button-primary w-full"
+              >
+                {submitting ? "Signing in..." : "Enter study room"}
+              </button>
+            </form>
+
+            <div className="mt-8 rounded-[24px] border border-[color:var(--border)] bg-white/55 p-4 text-sm text-[color:var(--text-muted)]">
+              New here?{" "}
+              <Link
+                className="font-bold text-[color:var(--accent)] transition hover:text-[color:var(--accent-strong)]"
+                to="/register"
+              >
+                Create your account
+              </Link>
+              {" "}and set up your first collaborative room.
+            </div>
+          </div>
         </div>
       </div>
     </div>
