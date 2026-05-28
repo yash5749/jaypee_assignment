@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { SessionAnalyticsDto, StudyRoomDto } from "../../../shared/types";
 import { useAuth } from "../hooks/useAuth";
 import {
@@ -22,7 +22,65 @@ const DashboardPage = () => {
   const [roomName, setRoomName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [copiedCodeRoomId, setCopiedCodeRoomId] = useState<string | null>(null);
+  const [copiedLinkRoomId, setCopiedLinkRoomId] = useState<string | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const autoJoinRef = useRef(false);
+
+  const copyWithFallback = (text: string) => {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "absolute";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return copied;
+  };
+
+  const showSuccess = (message: string) => {
+    setSuccess(message);
+    window.setTimeout(() => setSuccess(""), 2500);
+  };
+
+  const resetCopyStates = () => {
+    setCopiedCodeRoomId(null);
+    setCopiedLinkRoomId(null);
+  };
+
+  const copyToClipboard = async (text: string, message: string) => {
+    setError("");
+    setSuccess("");
+    resetCopyStates();
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        showSuccess(message);
+        return;
+      }
+
+      if (!copyWithFallback(text)) {
+        throw new Error("Copy failed");
+      }
+
+      showSuccess(message);
+    } catch {
+      setError("Unable to copy to clipboard.");
+    }
+  };
+
+  const getShareLink = (code: string) => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return `${window.location.origin}/?code=${code}`;
+  };
 
   useEffect(() => {
     Promise.all([listRooms(), getDashboardAnalytics()])
@@ -37,6 +95,45 @@ const DashboardPage = () => {
       });
   }, []);
 
+  useEffect(() => {
+    const codeFromUrl = new URLSearchParams(location.search).get("code");
+    if (codeFromUrl) {
+      setRoomCode(codeFromUrl.toUpperCase());
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    const codeFromUrl = new URLSearchParams(location.search).get("code");
+    if (!user || !codeFromUrl || autoJoinRef.current) {
+      return;
+    }
+
+    autoJoinRef.current = true;
+    const normalizedCode = codeFromUrl.toUpperCase();
+    setRoomCode(normalizedCode);
+    setError("");
+    setSuccess("");
+    setActionLoading(true);
+
+    (async () => {
+      try {
+        const room = await joinRoom(normalizedCode);
+        setRooms((prev) => {
+          if (prev.find((item) => item.id === room.id)) {
+            return prev;
+          }
+          return [room, ...prev];
+        });
+        await refreshAnalytics();
+        navigate(`/rooms/${room.id}`, { replace: true });
+      } catch (err) {
+        setError(getErrorMessage(err));
+      } finally {
+        setActionLoading(false);
+      }
+    })();
+  }, [location.search, navigate, user]);
+
   const refreshAnalytics = async () => {
     const data = await getDashboardAnalytics();
     setAnalytics(data);
@@ -45,6 +142,8 @@ const DashboardPage = () => {
   const handleCreateRoom = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
+    setSuccess("");
+    resetCopyStates();
     setActionLoading(true);
 
     try {
@@ -62,6 +161,8 @@ const DashboardPage = () => {
   const handleJoinRoom = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
+    setSuccess("");
+    resetCopyStates();
     setActionLoading(true);
 
     try {
@@ -84,6 +185,8 @@ const DashboardPage = () => {
 
   const handleLeaveRoom = async (roomId: string) => {
     setError("");
+    setSuccess("");
+    resetCopyStates();
     setActionLoading(true);
 
     try {
@@ -95,6 +198,21 @@ const DashboardPage = () => {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleCopyCode = async (roomId: string, code: string) => {
+    await copyToClipboard(code, "Room code copied.");
+    setCopiedCodeRoomId(roomId);
+  };
+
+  const handleCopyLink = async (roomId: string, code: string) => {
+    const link = getShareLink(code);
+    if (!link) {
+      setError("Share link is not available.");
+      return;
+    }
+    await copyToClipboard(link, "Share link copied.");
+    setCopiedLinkRoomId(roomId);
   };
 
   const focusWindows = [
@@ -218,6 +336,7 @@ const DashboardPage = () => {
         </section>
 
         {error && <p className="app-alert-error animate-rise">{error}</p>}
+        {success && <p className="app-alert-success animate-rise">{success}</p>}
 
         <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="surface-card-strong animate-rise p-6 sm:p-7">
@@ -474,7 +593,9 @@ const DashboardPage = () => {
             </div>
           ) : (
             <ul className="mt-6 grid gap-4 lg:grid-cols-2">
-              {rooms.map((room) => (
+              {rooms.map((room) => {
+                const shareLink = getShareLink(room.code);
+                return (
                 <li key={room.id} className="list-card">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -482,6 +603,17 @@ const DashboardPage = () => {
                       <p className="mt-2 text-xs font-extrabold uppercase tracking-[0.28em] text-[color:var(--text-soft)]">
                         {room.code}
                       </p>
+                      {shareLink && (
+                        <p className="mt-3 text-xs text-[color:var(--text-soft)]">
+                          Share link:{" "}
+                          <a
+                            href={shareLink}
+                            className="font-semibold text-[color:var(--text)] underline decoration-[color:var(--border-strong)] break-all"
+                          >
+                            {shareLink}
+                          </a>
+                        </p>
+                      )}
                     </div>
                     <button
                       onClick={() => handleLeaveRoom(room.id)}
@@ -502,15 +634,31 @@ const DashboardPage = () => {
 
                   <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                     <span className="status-pill">Ready for focus</span>
-                    <Link
-                      to={`/rooms/${room.id}`}
-                      className="app-button-primary px-4 py-2.5"
-                    >
-                      Enter room
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyCode(room.id, room.code)}
+                        className="app-button-ghost px-3 py-2 text-xs"
+                      >
+                        {copiedCodeRoomId === room.id ? "Copied!" : "Copy code"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLink(room.id, room.code)}
+                        className="app-button-ghost px-3 py-2 text-xs"
+                      >
+                        {copiedLinkRoomId === room.id ? "Copied!" : "Copy link"}
+                      </button>
+                      <Link
+                        to={`/rooms/${room.id}`}
+                        className="app-button-primary px-4 py-2.5"
+                      >
+                        Enter room
+                      </Link>
+                    </div>
                   </div>
                 </li>
-              ))}
+              )})}
             </ul>
           )}
         </section>

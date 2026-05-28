@@ -73,6 +73,14 @@ const AuthenticatedLayout = ({ children, room }: AuthenticatedLayoutProps) => {
           >
             GitHub
           </a>
+          <a
+            href="https://www.linkedin.com/in/peero/"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-[color:var(--text)] hover:underline"
+          >
+            Linkedin
+          </a>
           <span>Made with ❤️ by Yash</span>
           <span className="text-xs uppercase tracking-[0.28em] text-[color:var(--text-muted)]">
             Collaborative Study Room Platform
