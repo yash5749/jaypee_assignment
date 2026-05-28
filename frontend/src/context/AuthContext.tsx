@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import type { UserDto } from "../../../shared/types";
-import { login, me, register } from "../services/auth";
+import { login, me, register, updateProfile } from "../services/auth";
 import { setAuthToken, setUnauthorizedHandler } from "../services/api";
 import { connectSocket, disconnectSocket } from "../sockets/socket";
 
@@ -16,6 +16,7 @@ interface AuthContextValue {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  updateProfile: (name: string, email: string) => Promise<UserDto>;
   logout: () => void;
 }
 
@@ -100,6 +101,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     clearAuthState();
   }, [clearAuthState]);
 
+  const handleUpdateProfile = useCallback(async (name: string, email: string) => {
+    const updated = await updateProfile({ name, email });
+    setUser(updated);
+    return updated;
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -107,9 +114,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       loading,
       login: handleLogin,
       register: handleRegister,
+      updateProfile: handleUpdateProfile,
       logout: handleLogout,
     }),
-    [handleLogin, handleLogout, handleRegister, loading, token, user]
+    [handleLogin, handleLogout, handleRegister, handleUpdateProfile, loading, token, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
