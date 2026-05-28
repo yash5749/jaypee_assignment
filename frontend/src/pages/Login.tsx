@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { getErrorMessage } from "../utils/apiError";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,7 +19,11 @@ const LoginPage = () => {
 
     try {
       await login(email, password);
-      navigate("/", { replace: true });
+      const from = location.state?.from;
+      const redirectTo = from?.pathname
+        ? `${from.pathname}${from.search ?? ""}`
+        : "/";
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
