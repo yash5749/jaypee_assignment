@@ -10,7 +10,7 @@ import {
 } from "../services/rooms";
 import { getDashboardAnalytics } from "../services/sessions";
 import { getErrorMessage } from "../utils/apiError";
-import { formatDuration } from "../utils/formatters";
+import { formatDuration, formatDurationLabel } from "../utils/formatters";
 
 const DashboardPage = () => {
   const { user, logout } = useAuth();
@@ -96,6 +96,33 @@ const DashboardPage = () => {
     }
   };
 
+  const focusWindows = [
+    {
+      label: "24h",
+      seconds: analytics?.dailyStudySeconds ?? 0,
+      tone: "from-emerald-500 to-teal-600",
+    },
+    {
+      label: "7d",
+      seconds: analytics?.weeklyStudySeconds ?? 0,
+      tone: "from-amber-500 to-orange-500",
+    },
+    {
+      label: "30d",
+      seconds: analytics?.monthlyStudySeconds ?? 0,
+      tone: "from-sky-500 to-cyan-500",
+    },
+  ];
+
+  const maxFocusWindowSeconds = Math.max(
+    ...focusWindows.map((window) => window.seconds),
+    1
+  );
+  const maxRoomHistorySeconds = Math.max(
+    ...(analytics?.roomSummaries.map((summary) => summary.totalStudySeconds) ?? [0]),
+    1
+  );
+
   return (
     <div className="app-shell">
       <div className="app-frame flex flex-col gap-6 lg:gap-8">
@@ -125,30 +152,52 @@ const DashboardPage = () => {
           </div>
 
           <div className="mt-8 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <article className="metric-card">
                 <p className="section-eyebrow">Total study time</p>
                 <p className="metric-value">
                   {formatDuration(analytics?.totalStudySeconds ?? 0)}
                 </p>
                 <p className="mt-3 text-sm text-[color:var(--text-muted)]">
-                  Focus tracked across all joined rooms.
+                  Preserved across every room you have studied in.
                 </p>
               </article>
 
               <article className="metric-card">
-                <p className="section-eyebrow">Sessions logged</p>
-                <p className="metric-value">{analytics?.totalSessions ?? 0}</p>
+                <p className="section-eyebrow">Past 24 hours</p>
+                <p className="metric-value">
+                  {formatDuration(analytics?.dailyStudySeconds ?? 0)}
+                </p>
                 <p className="mt-3 text-sm text-[color:var(--text-muted)]">
-                  Shared blocks completed by your rooms so far.
+                  Personal focus time recorded in the last day.
                 </p>
               </article>
 
               <article className="metric-card">
-                <p className="section-eyebrow">Live rooms</p>
+                <p className="section-eyebrow">Past 7 days</p>
+                <p className="metric-value">
+                  {formatDuration(analytics?.weeklyStudySeconds ?? 0)}
+                </p>
+                <p className="mt-3 text-sm text-[color:var(--text-muted)]">
+                  Weekly momentum across your recent study blocks.
+                </p>
+              </article>
+
+              <article className="metric-card">
+                <p className="section-eyebrow">Past 30 days</p>
+                <p className="metric-value">
+                  {formatDuration(analytics?.monthlyStudySeconds ?? 0)}
+                </p>
+                <p className="mt-3 text-sm text-[color:var(--text-muted)]">
+                  Monthly history that remains even after leaving a room.
+                </p>
+              </article>
+
+              <article className="metric-card">
+                <p className="section-eyebrow">Live joined rooms</p>
                 <p className="metric-value">{analytics?.activeSessions ?? 0}</p>
                 <p className="mt-3 text-sm text-[color:var(--text-muted)]">
-                  Rooms currently running an active study session.
+                  Active sessions in rooms you currently belong to.
                 </p>
               </article>
             </div>
@@ -260,10 +309,52 @@ const DashboardPage = () => {
           <div className="surface-card-strong animate-rise p-6 sm:p-7">
             <div className="panel-heading">
               <div>
-                <p className="section-eyebrow">Room insights</p>
-                <h2 className="section-title mt-3">How your spaces are being used</h2>
+                <p className="section-eyebrow">Study history by room</p>
+                <h2 className="section-title mt-3">
+                  Your personal effort stays visible over time
+                </h2>
               </div>
               {loadingAnalytics && <span className="status-pill">Loading</span>}
+            </div>
+
+            <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/55 p-5">
+              <div className="flex items-end justify-between gap-4">
+                {focusWindows.map((window) => {
+                  const height = `${Math.max(
+                    (window.seconds / maxFocusWindowSeconds) * 100,
+                    window.seconds > 0 ? 24 : 10
+                  )}%`;
+
+                  return (
+                    <div
+                      key={window.label}
+                      className="flex flex-1 flex-col items-center gap-3"
+                    >
+                      <div
+                        className="flex h-40 w-full items-end justify-center rounded-[20px] px-3 py-3"
+                        style={{ backgroundColor: "rgba(236, 228, 216, 0.7)" }}
+                      >
+                        <div
+                          className={`w-full rounded-[16px] bg-gradient-to-t ${window.tone} shadow-[var(--shadow-sm)]`}
+                          style={{ height }}
+                        />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-bold text-[color:var(--text)]">
+                          {formatDuration(window.seconds)}
+                        </p>
+                        <p className="mt-1 text-xs font-extrabold uppercase tracking-[0.22em] text-[color:var(--text-soft)]">
+                          {window.label}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-4 text-sm text-[color:var(--text-muted)]">
+                A quick graph of your personal study time over the last day,
+                week, and month.
+              </p>
             </div>
 
             {analytics?.roomSummaries.length ? (
@@ -283,16 +374,35 @@ const DashboardPage = () => {
                         {formatDuration(summary.totalStudySeconds)}
                       </span>
                     </div>
+                    <div
+                      className="mt-4 h-2.5 rounded-full"
+                      style={{ backgroundColor: "rgba(236, 228, 216, 0.8)" }}
+                    >
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.max(
+                            (summary.totalStudySeconds / maxRoomHistorySeconds) * 100,
+                            6
+                          )}%`,
+                          background:
+                            "linear-gradient(90deg, var(--accent), #22c55e)",
+                        }}
+                      />
+                    </div>
                     <p className="mt-4 text-sm text-[color:var(--text-muted)]">
-                      {summary.totalSessions} sessions tracked and{" "}
-                      {summary.totalMessages} messages exchanged.
+                      You logged {summary.totalSessions} sessions and sent{" "}
+                      {summary.totalMessages} messages in this room.
+                    </p>
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-soft)]">
+                      {formatDurationLabel(summary.totalStudySeconds)} total
                     </p>
                   </li>
                 ))}
               </ul>
             ) : (
               <div className="empty-state mt-6">
-                Your room summaries will appear once you begin chatting or
+                Your room history will appear once you begin chatting or
                 running shared study sessions.
               </div>
             )}
@@ -301,8 +411,10 @@ const DashboardPage = () => {
           <div className="surface-card animate-rise p-6 sm:p-7">
             <div className="panel-heading">
               <div>
-                <p className="section-eyebrow">Recent activity</p>
-                <h2 className="section-title mt-3">A quick pulse on your groups</h2>
+                <p className="section-eyebrow">Your recent activity</p>
+                <h2 className="section-title mt-3">
+                  A rolling view of the work you have actually done
+                </h2>
               </div>
             </div>
 
@@ -336,8 +448,8 @@ const DashboardPage = () => {
               </ul>
             ) : (
               <div className="empty-state mt-6">
-                Once a room becomes active, this feed will help you spot
-                movement, momentum, and collaboration at a glance.
+                Once you begin studying or messaging, this feed will help you
+                track your own momentum at a glance.
               </div>
             )}
           </div>

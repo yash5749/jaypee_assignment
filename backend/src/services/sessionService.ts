@@ -14,14 +14,9 @@ type SessionEndedListener = (session: ReturnType<typeof toSessionDto>) => void;
 
 let sessionEndedListener: SessionEndedListener | null = null;
 
-const toSessionDto = (session: StudySession) => ({
-  id: session.id,
-  roomId: session.roomId,
-  startedById: session.startedById,
-  startedAt: session.startedAt.toISOString(),
-  endedAt: session.endedAt ? session.endedAt.toISOString() : null,
-  duration: session.duration ?? null,
-});
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const WEEK_IN_MS = 7 * DAY_IN_MS;
+const MONTH_IN_MS = 30 * DAY_IN_MS;
 
 const getSessionDeadline = (session: StudySession) => {
   if (!session.duration) {
@@ -44,6 +39,30 @@ const calculateCompletedSeconds = (session: StudySession) => {
 
   return Math.min(elapsedSeconds, session.duration);
 };
+
+const getSessionStatus = (session: StudySession) => {
+  if (!session.endedAt) {
+    return "active" as const;
+  }
+
+  const trackedSeconds = calculateCompletedSeconds(session);
+  if (session.duration && trackedSeconds >= session.duration - 1) {
+    return "completed" as const;
+  }
+
+  return "left" as const;
+};
+
+const toSessionDto = (session: StudySession) => ({
+  id: session.id,
+  roomId: session.roomId,
+  startedById: session.startedById,
+  startedAt: session.startedAt.toISOString(),
+  endedAt: session.endedAt ? session.endedAt.toISOString() : null,
+  duration: session.duration ?? null,
+  trackedSeconds: calculateCompletedSeconds(session),
+  status: getSessionStatus(session),
+});
 
 const clearScheduledRoomTimer = (roomId: string) => {
   const existing = scheduledRoomTimers.get(roomId);
@@ -271,15 +290,85 @@ const toSessionActivities = (session: SessionWithRelations) => {
   return activities;
 };
 
+const getWindowedStudySeconds = (
+  sessions: StudySession[],
+  windowStartTime: number
+) => {
+  return sessions.reduce((sum, session) => {
+    if (session.startedAt.getTime() < windowStartTime) {
+      return sum;
+    }
+
+    return sum + calculateCompletedSeconds(session);
+  }, 0);
+};
+
 export const getDashboardAnalytics = async (userId: string) => {
   const roomMemberships = await prisma.roomMember.findMany({
     where: { userId },
     select: { roomId: true },
   });
 
-  const roomIds = roomMemberships.map((membership) => membership.roomId);
-  if (roomIds.length === 0) {
+  const currentRoomIds = roomMemberships.map((membership) => membership.roomId);
+
+  await Promise.all(currentRoomIds.map((roomId) => syncActiveSessionState(roomId)));
+
+  const [userSessions, userMessages] = await Promise.all([
+    prisma.studySession.findMany({
+      where: { startedById: userId },
+      include: {
+        room: true,
+        startedBy: true,
+      },
+      orderBy: { startedAt: "desc" },
+    }),
+    prisma.message.findMany({
+      where: { userId },
+      include: {
+        room: true,
+        user: true,
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  // Dashboard history should survive leaving a room, so analytics are derived
+  // from the user's own sessions/messages rather than current membership alone.
+  const activityRoomMap = new Map<string, RoomWithAnalytics>();
+
+  for (const session of userSessions) {
+    const existing = activityRoomMap.get(session.roomId);
+    if (existing) {
+      existing.sessions.push(session);
+      continue;
+    }
+
+    activityRoomMap.set(session.roomId, {
+      ...session.room,
+      sessions: [session],
+      messages: [],
+    });
+  }
+
+  for (const message of userMessages) {
+    const existing = activityRoomMap.get(message.roomId);
+    if (existing) {
+      existing.messages.push(message);
+      continue;
+    }
+
+    activityRoomMap.set(message.roomId, {
+      ...message.room,
+      sessions: [],
+      messages: [message],
+    });
+  }
+
+  if (currentRoomIds.length === 0 && userSessions.length === 0 && userMessages.length === 0) {
     return {
+      dailyStudySeconds: 0,
+      weeklyStudySeconds: 0,
+      monthlyStudySeconds: 0,
       totalStudySeconds: 0,
       totalSessions: 0,
       activeSessions: 0,
@@ -288,53 +377,32 @@ export const getDashboardAnalytics = async (userId: string) => {
     };
   }
 
-  await Promise.all(roomIds.map((roomId) => syncActiveSessionState(roomId)));
-
-  const [rooms, messages, sessions] = await Promise.all([
-    prisma.studyRoom.findMany({
-      where: { id: { in: roomIds } },
-      include: {
-        sessions: true,
-        messages: true,
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.message.findMany({
-      where: { roomId: { in: roomIds } },
-      include: {
-        user: true,
-        room: true,
-      },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-    }),
-    prisma.studySession.findMany({
-      where: { roomId: { in: roomIds } },
-      include: {
-        startedBy: true,
-        room: true,
-      },
-      orderBy: { startedAt: "desc" },
-      take: 10,
-    }),
-  ]);
-
-  const roomSummaries = rooms
+  const roomSummaries = Array.from(activityRoomMap.values())
     .map((room) => buildRoomSummary(room))
     .sort((left, right) => right.totalStudySeconds - left.totalStudySeconds);
 
-  const totalStudySeconds = roomSummaries.reduce(
-    (sum, room) => sum + room.totalStudySeconds,
-    0
-  );
-  const totalSessions = rooms.reduce((sum, room) => sum + room.sessions.length, 0);
-  const activeSessions = rooms.reduce((sum, room) => {
-    return sum + room.sessions.filter((session) => !session.endedAt).length;
+  const totalStudySeconds = userSessions.reduce((sum, session) => {
+    return sum + calculateCompletedSeconds(session);
   }, 0);
+  const totalSessions = userSessions.length;
+  const activeSessions = await prisma.studySession.count({
+    where: {
+      roomId: { in: currentRoomIds },
+      endedAt: null,
+    },
+  });
+
+  const now = Date.now();
+  const dailyStudySeconds = getWindowedStudySeconds(userSessions, now - DAY_IN_MS);
+  const weeklyStudySeconds = getWindowedStudySeconds(userSessions, now - WEEK_IN_MS);
+  const monthlyStudySeconds = getWindowedStudySeconds(
+    userSessions,
+    now - MONTH_IN_MS
+  );
 
   const recentActivity = [
-    ...messages.map((message) => toRecentMessage(message)),
-    ...sessions.flatMap((session) => toSessionActivities(session)),
+    ...userMessages.map((message) => toRecentMessage(message)),
+    ...userSessions.flatMap((session) => toSessionActivities(session)),
   ]
     .sort((left, right) => {
       return (
@@ -344,6 +412,9 @@ export const getDashboardAnalytics = async (userId: string) => {
     .slice(0, 10);
 
   return {
+    dailyStudySeconds,
+    weeklyStudySeconds,
+    monthlyStudySeconds,
     totalStudySeconds,
     totalSessions,
     activeSessions,
