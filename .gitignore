@@ -1,2 +1,8 @@
 instruction.md
 frontend-ui-instruction.md
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+*.log
