@@ -1,13 +1,14 @@
 const js = require("@eslint/js");
 const globals = require("globals");
 const tseslint = require("typescript-eslint");
-const { defineConfig, globalIgnores } = require("eslint/config");
-
-module.exports = defineConfig([
-  globalIgnores(["dist", "node_modules"]),
+module.exports = [
+  {
+    ignores: ["dist", "node_modules", "eslint.config.js"],
+  },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     files: ["**/*.{ts,tsx}"],
-    extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       globals: globals.node,
     },
@@ -18,4 +19,4 @@ module.exports = defineConfig([
       ],
     },
   },
-]);
+];
