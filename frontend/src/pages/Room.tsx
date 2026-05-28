@@ -16,13 +16,39 @@ import { getRoomDetails } from "../services/rooms";
 import { getRoomSessionSync, listRoomSessions } from "../services/sessions";
 import { getSocket } from "../sockets/socket";
 import { getErrorMessage } from "../utils/apiError";
-import { formatDuration } from "../utils/formatters";
+import { formatDuration, formatDurationLabel } from "../utils/formatters";
 
 const SESSION_OPTIONS = [
   { label: "25 min", value: 25 * 60 },
   { label: "45 min", value: 45 * 60 },
   { label: "60 min", value: 60 * 60 },
 ];
+
+const getSessionStatusCopy = (session: StudySessionDto) => {
+  if (session.status === "active") {
+    return {
+      badgeClass: "status-pill-live",
+      badgeLabel: "Active",
+      detail: "Still running right now.",
+    };
+  }
+
+  if (session.status === "completed") {
+    return {
+      badgeClass: "status-pill",
+      badgeLabel: "Completed",
+      detail: `Finished the full ${formatDurationLabel(
+        session.trackedSeconds
+      )} block.`,
+    };
+  }
+
+  return {
+    badgeClass: "status-pill",
+    badgeLabel: "Left",
+    detail: `Left after ${formatDurationLabel(session.trackedSeconds)}.`,
+  };
+};
 
 const RoomPage = () => {
   const { user } = useAuth();
@@ -412,29 +438,32 @@ const RoomPage = () => {
                     </div>
                   ) : (
                     <ul className="mt-5 space-y-4">
-                      {sessionHistory.slice(0, 5).map((session) => (
-                        <li key={session.id} className="timeline-card">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                              <p className="text-sm font-bold text-[color:var(--text)]">
-                                {session.duration
-                                  ? `${Math.round(session.duration / 60)} minute focus block`
-                                  : "Study session"}
-                              </p>
-                              <p className="mt-2 text-sm text-[color:var(--text-muted)]">
-                                {new Date(session.startedAt).toLocaleString()}
-                              </p>
+                      {sessionHistory.slice(0, 5).map((session) => {
+                        const statusCopy = getSessionStatusCopy(session);
+
+                        return (
+                          <li key={session.id} className="timeline-card">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="text-sm font-bold text-[color:var(--text)]">
+                                  {session.duration
+                                    ? `${Math.round(session.duration / 60)} minute focus block`
+                                    : "Study session"}
+                                </p>
+                                <p className="mt-2 text-sm text-[color:var(--text-muted)]">
+                                  {new Date(session.startedAt).toLocaleString()}
+                                </p>
+                                <p className="mt-2 text-sm text-[color:var(--text-soft)]">
+                                  {statusCopy.detail}
+                                </p>
+                              </div>
+                              <span className={statusCopy.badgeClass}>
+                                {statusCopy.badgeLabel}
+                              </span>
                             </div>
-                            <span
-                              className={
-                                session.endedAt ? "status-pill" : "status-pill-live"
-                              }
-                            >
-                              {session.endedAt ? "Completed" : "Active"}
-                            </span>
-                          </div>
-                        </li>
-                      ))}
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>

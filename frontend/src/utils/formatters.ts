@@ -14,3 +14,19 @@ export const formatDuration = (totalSeconds: number) => {
     .map((value) => value.toString().padStart(2, "0"))
     .join(":");
 };
+
+export const formatDurationLabel = (totalSeconds: number) => {
+  const safeSeconds = Math.max(0, totalSeconds);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+
+  if (hours === 0) {
+    return `${minutes} min`;
+  }
+
+  if (minutes === 0) {
+    return `${hours} hr`;
+  }
+
+  return `${hours} hr ${minutes} min`;
+};

@@ -37,9 +37,14 @@ export interface StudySessionDto {
   startedAt: string;
   endedAt?: string | null;
   duration?: number | null;
+  trackedSeconds: number;
+  status: "active" | "completed" | "left";
 }
 
 export interface SessionAnalyticsDto {
+  dailyStudySeconds: number;
+  weeklyStudySeconds: number;
+  monthlyStudySeconds: number;
   totalStudySeconds: number;
   totalSessions: number;
   activeSessions: number;
