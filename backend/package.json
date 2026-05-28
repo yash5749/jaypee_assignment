@@ -5,6 +5,12 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "start": "node dist/backend/src/server.js",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
@@ -28,13 +34,21 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
     "@types/node": "^25.9.1",
+    "@types/supertest": "^6.0.2",
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
+    "prettier": "^3.5.2",
+    "supertest": "^7.1.4",
     "tsx": "^4.22.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.2",
+    "vitest": "^2.1.9"
   }
 }
