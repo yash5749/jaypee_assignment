@@ -31,3 +31,8 @@ export const me = async () => {
   const { data } = await api.get<ApiResponse<UserDto>>("/api/auth/me");
   return data.data;
 };
+
+export const updateProfile = async (input: { name: string; email: string }) => {
+  const { data } = await api.patch<ApiResponse<UserDto>>("/api/auth/me", input);
+  return data.data;
+};

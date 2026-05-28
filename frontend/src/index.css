@@ -198,6 +198,12 @@
     background-color: rgba(254, 242, 242, 0.8);
   }
 
+  .app-alert-success {
+    @apply app-alert text-emerald-700;
+    border-color: rgba(167, 243, 208, 0.8);
+    background-color: rgba(236, 253, 245, 0.85);
+  }
+
   .empty-state {
     @apply rounded-[24px] border border-dashed border-[color:var(--border-strong)] p-6 text-center text-sm leading-6 text-[color:var(--text-muted)];
     background-color: rgba(255, 255, 255, 0.38);

@@ -17,6 +17,7 @@ import { getRoomSessionSync, listRoomSessions } from "../services/sessions";
 import { getSocket } from "../sockets/socket";
 import { getErrorMessage } from "../utils/apiError";
 import { formatDuration, formatDurationLabel } from "../utils/formatters";
+import AuthenticatedLayout from "../layouts/AuthenticatedLayout";
 
 const SESSION_OPTIONS = [
   { label: "25 min", value: 25 * 60 },
@@ -263,23 +264,21 @@ const RoomPage = () => {
 
   if (!roomId) {
     return (
-      <div className="app-shell">
-        <div className="app-frame">
-          <div className="surface-card-strong p-8 text-center">
-            <p className="section-eyebrow">Room unavailable</p>
-            <p className="mt-4 text-sm text-[color:var(--text-muted)]">
-              This room could not be found. Head back to the dashboard and choose
-              another study space.
-            </p>
-          </div>
+      <AuthenticatedLayout>
+        <div className="surface-card-strong p-8 text-center">
+          <p className="section-eyebrow">Room unavailable</p>
+          <p className="mt-4 text-sm text-[color:var(--text-muted)]">
+            This room could not be found. Head back to the dashboard and choose
+            another study space.
+          </p>
         </div>
-      </div>
+      </AuthenticatedLayout>
     );
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-frame flex flex-col gap-6 lg:gap-8">
+    <AuthenticatedLayout room={room}>
+      <div className="flex flex-col gap-6 lg:gap-8">
         <section className="hero-panel animate-rise">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <Link to="/" className="app-button-ghost px-0 py-0 text-sm font-bold">
@@ -601,7 +600,7 @@ const RoomPage = () => {
           </div>
         )}
       </div>
-    </div>
+    </AuthenticatedLayout>
   );
 };
 

@@ -67,3 +67,33 @@ export const getCurrentUser = async (userId: string) => {
 
   return toUserDto(user);
 };
+
+export const updateCurrentUser = async (
+  userId: string,
+  input: { name: string; email: string }
+) => {
+  const name = input.name.trim();
+  const email = input.email.trim().toLowerCase();
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new HttpError(404, "User not found");
+  }
+
+  if (email !== user.email) {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing && existing.id !== userId) {
+      throw new HttpError(409, "Email already in use");
+    }
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      name,
+      email,
+    },
+  });
+
+  return toUserDto(updated);
+};

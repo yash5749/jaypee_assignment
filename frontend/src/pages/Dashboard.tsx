@@ -11,6 +11,7 @@ import {
 import { getDashboardAnalytics } from "../services/sessions";
 import { getErrorMessage } from "../utils/apiError";
 import { formatDuration, formatDurationLabel } from "../utils/formatters";
+import AuthenticatedLayout from "../layouts/AuthenticatedLayout";
 
 const DashboardPage = () => {
   const { user, logout } = useAuth();
@@ -124,8 +125,8 @@ const DashboardPage = () => {
   );
 
   return (
-    <div className="app-shell">
-      <div className="app-frame flex flex-col gap-6 lg:gap-8">
+    <AuthenticatedLayout>
+      <div className="flex flex-col gap-6 lg:gap-8">
         <section className="hero-panel animate-rise">
           <div className="panel-heading gap-5">
             <div className="max-w-3xl">
@@ -152,7 +153,7 @@ const DashboardPage = () => {
           </div>
 
           <div className="mt-8 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
               <article className="metric-card">
                 <p className="section-eyebrow">Total study time</p>
                 <p className="metric-value">
@@ -514,7 +515,7 @@ const DashboardPage = () => {
           )}
         </section>
       </div>
-    </div>
+    </AuthenticatedLayout>
   );
 };
 
